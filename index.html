@@ -363,9 +363,8 @@
         <table class="gtt-table" id="gttTable">
           <thead>
             <tr>
-              <th>gtt/min</th>
-              <th>cc/hr</th>
-              <th>초/방울</th>
+              <th>분당 방울수</th>
+              <th>방울 간격(초)</th>
             </tr>
           </thead>
           <tbody id="gttTableBody"></tbody>
@@ -397,12 +396,10 @@
     function buildGttTable() {
       const rows = [];
       for (let g = 1; g <= 40; g++) {
-        const ccHr = (g * 60) / DROP_FACTOR;
         const secPerDrop = 60 / g;
         rows.push(
           `<tr data-gtt="${g}">` +
             `<td>${g}</td>` +
-            `<td>${ccHr.toFixed(1)}</td>` +
             `<td>${secPerDrop.toFixed(2)}</td>` +
           `</tr>`
         );
