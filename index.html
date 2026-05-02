@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>GTT 자동 계산기</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 8px;
+    }
+    h1 { font-size: 1.15rem; font-weight: 600; opacity: 0.9; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat .label { font-size: 0.75rem; opacity: 0.7; margin-bottom: 4px; }
+    .stat .value { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat .unit { font-size: 0.7rem; opacity: 0.6; margin-left: 2px; }
+
+    .main-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.08);
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.05s;
+      border: 2px solid rgba(255,255,255,0.15);
+    }
+    .main-display:active {
+      background: rgba(255,255,255,0.2);
+      transform: scale(0.99);
+    }
+    .main-display.flash { background: rgba(100, 255, 150, 0.3); }
+
+    .gtt-value {
+      font-size: 5rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+    .gtt-unit { font-size: 1rem; opacity: 0.7; margin-top: 6px; }
+    .tap-hint {
+      position: absolute;
+      bottom: 20px;
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .pulse-dot.active { animation: pulse 0.3s ease-out; }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    .interval-log {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 56px;
+    }
+    .interval-log .label {
+      font-size: 0.72rem;
+      opacity: 0.6;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .interval-log .label .count { font-variant-numeric: tabular-nums; }
+    .interval-strip {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .interval-strip::-webkit-scrollbar { height: 3px; }
+    .interval-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+    .interval-chip {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.12);
+      padding: 4px 9px;
+      border-radius: 7px;
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .interval-chip.latest {
+      background: rgba(74, 222, 128, 0.3);
+      color: #d1fae5;
+      font-weight: 600;
+    }
+    .interval-empty {
+      font-size: 0.78rem;
+      opacity: 0.4;
+      align-self: center;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .controls button {
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.05s;
+    }
+    .controls button:active { transform: scale(0.97); }
+    .btn-reset { background: rgba(248, 113, 113, 0.3); color: #fff; }
+    .btn-table { background: rgba(96, 165, 250, 0.3); color: #fff; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 600; }
+    .modal-header .sub { font-size: 0.72rem; opacity: 0.6; margin-top: 2px; }
+    .modal-close {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .modal-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gtt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+    .gtt-table th, .gtt-table td {
+      padding: 8px 12px;
+      text-align: right;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .gtt-table th {
+      position: sticky;
+      top: 0;
+      background: rgba(30, 60, 114, 0.95);
+      backdrop-filter: blur(8px);
+      font-weight: 600;
+      font-size: 0.75rem;
+      opacity: 0.85;
+      text-align: right;
+    }
+    .gtt-table th:first-child, .gtt-table td:first-child {
+      text-align: center;
+      font-weight: 600;
+    }
+    .gtt-table tr.current {
+      background: rgba(74, 222, 128, 0.25);
+    }
+    .gtt-table tr.current td { font-weight: 700; color: #d1fae5; }
+
+    @media (max-width: 380px) {
+      .gtt-value { font-size: 4rem; }
+      .stat .value { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💧 GTT 자동 계산기</h1>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="label">방울 수</div>
+      <div class="value"><span id="dropCount">0</span><span class="unit">drops</span></div>
+    </div>
+    <div class="stat">
+      <div class="label">경과 시간</div>
+      <div class="value" id="elapsedTime">0.0<span class="unit">s</span></div>
+    </div>
+  </div>
+
+  <div class="main-display" id="tapArea">
+    <div class="gtt-value"><span id="gttValue">--</span></div>
+    <div class="gtt-unit">gtt / min</div>
+    <div style="margin-top: 16px; font-size: 0.95rem; opacity: 0.85;">
+      <span id="ccHr">-- cc/hr</span>
+    </div>
+    <div class="tap-hint">방울이 떨어질 때마다 화면을 탭하세요</div>
+  </div>
+
+  <div class="interval-log">
+    <div class="label">
+      <span>방울 간격 기록</span>
+      <span class="count" id="intervalCount"></span>
+    </div>
+    <div class="interval-strip" id="intervalStrip">
+      <span class="interval-empty">두 번째 탭부터 간격이 기록됩니다</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-reset" id="resetBtn">🔄 초기화</button>
+    <button class="btn-table" id="tableBtn">📊 환산표</button>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2>GTT 환산표</h2>
+          <div class="sub">20 gtt/mL 기준 · 현재 측정값 강조</div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <table class="gtt-table" id="gttTable">
+          <thead>
+            <tr>
+              <th>gtt/min</th>
+              <th>cc/hr</th>
+              <th>초/방울</th>
+            </tr>
+          </thead>
+          <tbody id="gttTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DROP_FACTOR = 20; // 한국 표준 매크로 세트 (20 gtt/mL)
+    let dropTimes = [];
+    let firstTapTime = null;
+    let timerInterval = null;
+
+    const tapArea = document.getElementById('tapArea');
+    const gttValueEl = document.getElementById('gttValue');
+    const ccHrEl = document.getElementById('ccHr');
+    const dropCountEl = document.getElementById('dropCount');
+    const elapsedTimeEl = document.getElementById('elapsedTime');
+    const resetBtn = document.getElementById('resetBtn');
+    const intervalStrip = document.getElementById('intervalStrip');
+    const intervalCount = document.getElementById('intervalCount');
+    const tableBtn = document.getElementById('tableBtn');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const gttTableBody = document.getElementById('gttTableBody');
+
+    // 1~40 gtt/min 환산표 생성
+    function buildGttTable() {
+      const rows = [];
+      for (let g = 1; g <= 40; g++) {
+        const ccHr = (g * 60) / DROP_FACTOR;
+        const secPerDrop = 60 / g;
+        rows.push(
+          `<tr data-gtt="${g}">` +
+            `<td>${g}</td>` +
+            `<td>${ccHr.toFixed(1)}</td>` +
+            `<td>${secPerDrop.toFixed(2)}</td>` +
+          `</tr>`
+        );
+      }
+      gttTableBody.innerHTML = rows.join('');
+    }
+    buildGttTable();
+
+    function highlightCurrentRow() {
+      gttTableBody.querySelectorAll('tr.current').forEach(r => r.classList.remove('current'));
+      const gtt = calcGttPerMin();
+      if (gtt === null) return;
+      const rounded = Math.round(gtt);
+      if (rounded < 1 || rounded > 40) return;
+      const row = gttTableBody.querySelector(`tr[data-gtt="${rounded}"]`);
+      if (row) row.classList.add('current');
+    }
+
+    tableBtn.addEventListener('click', () => {
+      highlightCurrentRow();
+      modalBackdrop.classList.add('open');
+      // 현재 행으로 스크롤
+      const current = gttTableBody.querySelector('tr.current');
+      if (current) current.scrollIntoView({ block: 'center' });
+    });
+    modalCloseBtn.addEventListener('click', () => modalBackdrop.classList.remove('open'));
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.classList.remove('open');
+    });
+
+    function formatNum(n, digits = 1) {
+      if (!isFinite(n) || n <= 0) return '--';
+      return n.toFixed(digits);
+    }
+
+    function calcGttPerMin() {
+      if (dropTimes.length < 2) return null;
+      // 최근 8개 방울의 평균 간격으로 실시간 계산
+      const window = Math.min(dropTimes.length - 1, 8);
+      const recent = dropTimes.slice(-(window + 1));
+      const span = (recent[recent.length - 1] - recent[0]) / 1000;
+      if (span <= 0) return null;
+      return (window / span) * 60;
+    }
+
+    function updateDisplay() {
+      const gtt = calcGttPerMin();
+      if (gtt === null) {
+        gttValueEl.textContent = '--';
+        ccHrEl.textContent = '-- cc/hr';
+      } else {
+        gttValueEl.textContent = formatNum(gtt, 1);
+        const ccHr = (gtt * 60) / DROP_FACTOR;
+        ccHrEl.textContent = formatNum(ccHr, 1) + ' cc/hr';
+      }
+      dropCountEl.textContent = dropTimes.length;
+      if (firstTapTime) {
+        const elapsed = (Date.now() - firstTapTime) / 1000;
+        elapsedTimeEl.innerHTML = formatNum(elapsed, 1) + '<span class="unit">s</span>';
+      } else {
+        elapsedTimeEl.innerHTML = '0.0<span class="unit">s</span>';
+      }
+      if (modalBackdrop && modalBackdrop.classList.contains('open')) {
+        highlightCurrentRow();
+      }
+    }
+
+    function appendInterval(seconds) {
+      // 빈 안내 메시지 제거
+      const empty = intervalStrip.querySelector('.interval-empty');
+      if (empty) empty.remove();
+      // 이전 latest → 일반으로
+      const prevLatest = intervalStrip.querySelector('.interval-chip.latest');
+      if (prevLatest) prevLatest.classList.remove('latest');
+      // 새 칩
+      const chip = document.createElement('span');
+      chip.className = 'interval-chip latest';
+      chip.textContent = seconds.toFixed(2) + 's';
+      intervalStrip.appendChild(chip);
+      // 우측으로 자동 스크롤
+      requestAnimationFrame(() => {
+        intervalStrip.scrollLeft = intervalStrip.scrollWidth;
+      });
+      intervalCount.textContent = `${intervalStrip.querySelectorAll('.interval-chip').length}개`;
+    }
+
+    function handleTap(e) {
+      e.preventDefault();
+      const now = Date.now();
+      if (firstTapTime === null) {
+        firstTapTime = now;
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(updateDisplay, 100);
+      } else {
+        const lastTap = dropTimes[dropTimes.length - 1];
+        const gap = (now - lastTap) / 1000;
+        appendInterval(gap);
+      }
+      dropTimes.push(now);
+      // 시각적 피드백
+      tapArea.classList.add('flash');
+      setTimeout(() => tapArea.classList.remove('flash'), 80);
+      // 햅틱 (지원하는 기기)
+      if (navigator.vibrate) navigator.vibrate(15);
+      updateDisplay();
+    }
+
+    tapArea.addEventListener('pointerdown', handleTap);
+
+    // 스페이스바로도 카운트
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        handleTap(e);
+      }
+    });
+
+    // 초기화
+    resetBtn.addEventListener('click', () => {
+      dropTimes = [];
+      firstTapTime = null;
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      intervalStrip.innerHTML = '<span class="interval-empty">두 번째 탭부터 간격이 기록됩니다</span>';
+      intervalCount.textContent = '';
+      updateDisplay();
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
