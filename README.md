@@ -4,6 +4,8 @@
 
 사용방법 영상: [https://youtu.be/5xy_fA-HPuE](https://youtu.be/5xy_fA-HPuE)
 
+![image.jpg](https://gtt.cokac.com/image.jpg)
+
 ---
 
 ## 📱 주요 기능
