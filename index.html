@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -296,6 +297,8 @@
       background: rgba(74, 222, 128, 0.25);
     }
     .gtt-table tr.current td { font-weight: 700; color: #d1fae5; }
+    .gtt-table .drop-num { font-weight: 700; margin: 0 4px; }
+    .gtt-table .drop-label { opacity: 0.5; }
 
     @media (max-width: 380px) {
       .gtt-value { font-size: 4rem; }
@@ -355,7 +358,7 @@
       <div class="modal-header">
         <div>
           <h2>GTT 환산표</h2>
-          <div class="sub">20 gtt/mL 기준 · 현재 측정값 강조</div>
+          <div class="sub">현재 측정값 강조</div>
         </div>
         <button class="modal-close" id="modalCloseBtn">✕</button>
       </div>
@@ -363,8 +366,8 @@
         <table class="gtt-table" id="gttTable">
           <thead>
             <tr>
-              <th>분당 방울수</th>
-              <th>방울 간격(초)</th>
+              <th>초에 한방울</th>
+              <th>gtt</th>
             </tr>
           </thead>
           <tbody id="gttTableBody"></tbody>
@@ -392,15 +395,15 @@
     const modalCloseBtn = document.getElementById('modalCloseBtn');
     const gttTableBody = document.getElementById('gttTableBody');
 
-    // 1~40 gtt/min 환산표 생성
+    // 초 단위(1~30초) 환산표 생성
     function buildGttTable() {
       const rows = [];
-      for (let g = 1; g <= 40; g++) {
-        const secPerDrop = 60 / g;
+      for (let sec = 1; sec <= 30; sec++) {
+        const gtt = 60 / sec;
         rows.push(
-          `<tr data-gtt="${g}">` +
-            `<td>${g}</td>` +
-            `<td>${secPerDrop.toFixed(2)}</td>` +
+          `<tr data-sec="${sec}">` +
+            `<td><span class="drop-num">${sec}</span><span class="drop-label">초에 한방울</span></td>` +
+            `<td><span class="drop-label">분당</span><span class="drop-num">${Number.isInteger(gtt) ? gtt : gtt.toFixed(1)}</span><span class="drop-label">방울</span></td>` +
           `</tr>`
         );
       }
@@ -411,10 +414,10 @@
     function highlightCurrentRow() {
       gttTableBody.querySelectorAll('tr.current').forEach(r => r.classList.remove('current'));
       const gtt = calcGttPerMin();
-      if (gtt === null) return;
-      const rounded = Math.round(gtt);
-      if (rounded < 1 || rounded > 40) return;
-      const row = gttTableBody.querySelector(`tr[data-gtt="${rounded}"]`);
+      if (gtt === null || gtt <= 0) return;
+      const sec = Math.round(60 / gtt);
+      if (sec < 1 || sec > 30) return;
+      const row = gttTableBody.querySelector(`tr[data-sec="${sec}"]`);
       if (row) row.classList.add('current');
     }
 
