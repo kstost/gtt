@@ -2,9 +2,44 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
   <title>GTT 자동 계산기</title>
+  <meta name="description" content="수액 가트(gtt) 분당 방울 수 자동 계산기. 화면을 탭하여 실시간으로 주입 속도를 측정합니다.">
+  <link rel="canonical" href="https://gtt.cokac.com/">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e3c72">
+
+  <!-- iOS 홈 화면 추가 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GTT">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/icon-167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GTT 자동 계산기">
+  <meta property="og:title" content="GTT 자동 계산기">
+  <meta property="og:description" content="수액 가트(gtt) 분당 방울 수를 화면 탭으로 자동 계산합니다.">
+  <meta property="og:url" content="https://gtt.cokac.com/">
+  <meta property="og:image" content="https://gtt.cokac.com/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="GTT 자동 계산기">
+  <meta name="twitter:description" content="수액 가트(gtt) 분당 방울 수를 화면 탭으로 자동 계산합니다.">
+  <meta name="twitter:image" content="https://gtt.cokac.com/icon-512.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
     html, body { height: 100%; overflow: hidden; }
@@ -15,7 +50,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      padding: 16px;
+      padding: calc(env(safe-area-inset-top, 0) + 16px) calc(env(safe-area-inset-right, 0) + 16px) calc(env(safe-area-inset-bottom, 0) + 16px) calc(env(safe-area-inset-left, 0) + 16px);
       gap: 12px;
     }
 
@@ -155,6 +190,14 @@
     .btn-reset { background: rgba(248, 113, 113, 0.3); color: #fff; }
     .btn-table { background: rgba(96, 165, 250, 0.3); color: #fff; }
 
+    .dedication {
+      text-align: center;
+      font-size: 0.72rem;
+      opacity: 0.5;
+      letter-spacing: 0.01em;
+      padding: 2px 4px;
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -276,6 +319,8 @@
     <button class="btn-reset" id="resetBtn">🔄 초기화</button>
     <button class="btn-table" id="tableBtn">📊 환산표</button>
   </div>
+
+  <div class="dedication">Nguyen Thi Hoai Thu가 감사함을 담아 우먼피아 여성병원께</div>
 
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
@@ -458,6 +503,15 @@
     });
 
     updateDisplay();
+
+    // Service Worker 등록 (PWA 설치 가능 + 오프라인 지원)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
   </script>
 </body>
 </html>
